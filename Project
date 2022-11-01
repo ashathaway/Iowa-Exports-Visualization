@@ -1,0 +1,175 @@
+---
+title: "Iowa Commodity Exports"
+author: "Anna Hathaway"
+date: "`r format(Sys.Date(), '%B %e, %Y')`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, include=FALSE}
+library(readxl)
+exports <- read_excel("Commodity_Exports_crosstab_data (1).xlsx", col_names=TRUE)
+```
+  
+## The Data
+The Iowa Data Center has reported the number of exported commodities from the state of Iowa for the top 25 exports. The data can be seen here https://www.iowadatacenter.org/data/business/imports-exports/exports. In this dataset, I will examine the top 25 commodities that are being exported from Iowa based on the values from years 2017 to 2020. All values are stated in millions of dollars.
+
+Variables include:
+
+* Value of exports for a specific commodity for that specific year
+* Percent share for a commodity compared to other Iowa commodities for a specific year
+* The top 25 total percent share compared to Iowa total
+* Percent share of Iowa exports compared to all U.S. exports
+* Percentage change from 2019 to 2020 for each commodity
+  
+## Motivation
+Since Iowa is such a large farming state, it will be interesting to learn what commodities are exported in the highest quantity. Although, not all commodities are a product of farming as we will see. I will be investigating what the largest Iowa exports are and how they have changed in the recent years. To do this, I will compare the exports to each other for evaluations. I will be focusing on corn, soybeans, and swine, since these are what most people think when they hear of Iowa. There are two categories of soybeans and three swine categories that make appear in the top 25 export list. Lastly, I will examine how the top 25 commodities make up a significant amount of all exports coming from Iowa. 
+
+## Exploration of Top 25 Iowa Exports in 2017-2020
+  
+This list contains the full names of the 25 commodity Iowa exports that will be analyzed. They are in alphabetical order.
+  
+```{r, echo=FALSE, message=FALSE}
+library(dplyr)
+exportstable <- exports %>% filter(description!= "Total Iowa Exports and % Share of U.S. Total") %>% filter(description!="Total, Top 25 Commodities and % Share of State Total") %>% group_by(description) %>% summarise(n=n()) %>% select(description)
+d <-data.frame(exportstable)
+kbl <- knitr::kable(d, format = "html")
+kableExtra::kable_styling(kbl, full_width = FALSE)
+```
+
+  
+```{r, echo=FALSE, message=FALSE}
+library(ggplot2)
+exports1 <- exports %>% filter(rank != ".", name=="2017 Value" | name=="2018 Value" | name=="2019 Value"| name=="2020 Value") %>% select(description, name, value) %>% group_by(description)
+plot1 <- ggplot(exports1) + geom_point(aes(x=reorder(description, value), y=value, color=name)) +coord_flip() + labs(x="Commodity") + ggtitle("Top 25 Iowa Commodity Values 2017-2020")
+plot1
+```
+  
+From this graph, we can see how there is little change from year to year for each commodity. The consistency is something worth noting for all exports. Since each year is quite consistent in Iowa, the productions of goods can remain constant. For all four years, corn remains as the most exported commodity in Iowa. Corn is the one with the highest variability over the years. This can be connected to the variability of weather and farming reliability. On the other hand, flat-rolled products of iron or nonalloy steel remains as the least exported good over the years. 
+  
+
+```{r, echo=FALSE}
+exports2 <- exports %>% filter(rank != ".", name=="2017 Value" | name=="2018 Value" | name=="2019 Value"| name=="2020 Value") %>% filter(description != "Corn (Maize), Other Than Seed Corn") %>% select(description, name, value) %>% group_by(description)
+plot2 <- ggplot(exports2) + geom_point(aes(x=reorder(description, value), y=value, color=name)) +coord_flip() + labs(x="Commodity") + ggtitle("Commodity Values Minus Corn 2017-2020")
+plot2
+```
+  
+By leaving corn off of the graph, we can more easily see the variability within each export throughout the years. Again, each year does not change drastically for each export. 
+  
+```{r, include=FALSE, message=FALSE}
+exports5 <- exports %>% filter(description=="Corn (Maize), Other Than Seed Corn"| description=="Tractors (Other Than Tractors Of Heading 8709) Exc"| description=="Meat Of Swine, NESOI, Frozen"| description=="Meat Of Swine, NESOI, Fresh Or Chilled"| description=="Herbacides, Antisprouting Products and Plant-Growth") %>% select(description, name, value) %>% group_by(description) %>% summarize(ave_val = mean(value, na.rm = TRUE)) %>% ungroup()
+```
+```{r, echo=FALSE}
+ggplot(exports5) +
+    geom_col(aes(x = reorder(description, -ave_val), y=ave_val), fill = "deepskyblue3") + theme(axis.text.x = element_text(angle = 40, hjust = 1)) + ggtitle("Top 5 Exports on Average") + xlab("Description") + ylab("Average Value")
+```
+  
+This bar chart illustrates the average value from 2017-2020 for the top 5 Iowa commodity exports. In order from greatest to smallest average export values is corn, tractors, frozen meat of swine, and herbacides. It is interesting to note how much corn is produced in Iowa. The fifth largest export of herbacides is less than half of the average value of corn exported. 
+  
+## Corn in Iowa
+```{r, echo=FALSE}
+corn <- exports %>% filter(grepl("Corn", description)) %>% filter(grepl("Value", name)) 
+c <- ggplot(corn, aes(x = name,
+                   y = value, group=description)) + geom_line() + geom_point() +ggtitle("Corn Values from 2017-2020") +ylim(c(0,1500))
+c
+```
+  
+This chart illustrates how corn exports have changed from 2017-2020. After further investigation, there was a large decrease of corn in 2019 because temperature and radiation during the grain filling period is less than would typically be expected due to later than normal planting dates. This is expected to continue over the next several years. 
+  
+```{r, echo=FALSE}
+cornp <- exports %>% filter(grepl("Corn", description)) %>% filter(grepl("Share", name)) %>% select(description, name, value)
+d <-data.frame(cornp)
+kbl <- knitr::kable(d, format = "html")
+kableExtra::kable_styling(kbl, full_width = FALSE)
+```
+  
+This table states the percent share of all exports from Iowa that are corn. In 2019, it can be seen again how the percent share was cut in half and remains historically lower.
+  
+  
+## Soybeans in Iowa
+Another important crop in Iowa is soybeans. The data below includes soybean oilcake and other solid residues results and soybeans, other than seeds. Soybean oilcake is obtained after squeezing oil from soybean seeds during extrusion. It is used for high-grade animal feed and feed mixture. Soybeans other than seeds are used for human consumption. It includes unfermented foods – tofu, soymilk, edamame, soy nuts and sprouts, while fermented soy products include – miso, tempeh, natto and soy sauce.
+  
+```{r,echo=FALSE}
+soy <- exports %>% filter(grepl("Soybean", description)) %>% filter(grepl("Value", name)) %>% group_by(description)
+so <- ggplot(soy, aes(x = name,
+                   y = value,
+                   group = description, color=description)) +geom_line() +geom_point() +ggtitle("Soy Variant Values from 2017-2020") +ylim(c(0,500))
+so
+```
+  
+This chart shows the values for each of the soybeans from 2017-2020. They change quite a bit but remain in the 200-400 range throughout the years. Since it is a crop, changing weather and planting can affect the yield. 
+  
+#### Soybean Percent Share in 2020
+```{r, echo=FALSE}
+soytotal <- exports %>% filter(grepl("Soybean", description)) %>% filter(name=="2020 % Share") %>% summarise(total=sum(value)) 
+d <-data.frame(soytotal)
+kbl <- knitr::kable(d, format = "html")
+kableExtra::kable_styling(kbl, full_width = FALSE)
+```
+  
+In 2020, soybeans (oilcake and non-seeds) accounted for almost 6% of the exports from Iowa. 
+  
+## Swine in Iowa 
+```{r, echo=FALSE}
+swine <- exports %>% filter(grepl("Swine", description)) %>% filter(grepl("Value", name)) %>% group_by(description)
+swinetable <- swine %>% select(description) %>% summarise(n=n()) %>% select(description)
+d <-data.frame(swinetable)
+kbl <- knitr::kable(d, format = "html")
+kableExtra::kable_styling(kbl, full_width = FALSE)
+```
+  
+These are the full names of the three different commodities exported from Iowa that involve swine. Offal of swine refers to the heart, lungs, brain, liver, cheeks and tongue. It is the collective name for the internal parts of an animal we eat. The meat of swine, fresh or frozen, is most commonly called pork. 
+  
+```{r, echo=FALSE}
+s <- ggplot(swine, aes(x = name,
+                   y = value,
+                   group = description, color=description)) +geom_line() +geom_point() +ggtitle("Swine Variant Values from 2017-2020")
+s
+```
+  
+Here we can see how these swine exports change over time. Frozen swine meat has the largest value after surpassing fresh/chilled meat in 2018. The offal of swine stays quite low compared to the other variants of swine. 
+  
+#### Swine Percent Share in 2020
+```{r, echo=FALSE}
+swinetotal <- exports %>% filter(grepl("Swine", description)) %>% filter(name=="2020 % Share") %>% summarise(total=sum(value)) 
+d <-data.frame(swinetotal)
+kbl <- knitr::kable(d, format = "html")
+kableExtra::kable_styling(kbl, full_width = FALSE)
+```
+In 2020, all variants of swine together accounted for about 9.5% of all Iowa exports. 
+  
+## Top 25 Commodities and the % Share of State Total
+This dataset includes information on how the top 25 commodities as a grand total equate for much of the entirety of exports from Iowa. 
+```{r, echo=FALSE}
+top25 <- exports %>% filter(description=="Total, Top 25 Commodities and % Share of State Total") %>% filter(grepl("Value", name))
+ggplot(top25) +
+    geom_col(aes(x = name, y=value), fill = "deepskyblue3") +ggtitle("Top 25 Exports Grand Totals Per Year") +xlab("Year") +ylab("Value")
+```
+  
+This bar chart illustrates the consistency of the top 25 Iowa exports grand totals over the years. There is a slight spike in total in the year 2018. The consistency is a positive sign when looking at the state's top exports because it proves less variability in production and more reliability. 
+
+```{r, echo=FALSE}
+top252 <- exports %>% filter(description=="Total, Top 25 Commodities and % Share of State Total") %>% filter(grepl("Share", name))
+ggplot(top252) +
+    geom_col(aes(x = name, y=value), fill = "red") +ggtitle("Top 25 Exports % Share Totals Per Year") +xlab("Year") +ylab("Value") +ylim(c(0,100))
+```
+  
+This bar chart shows the percentage of top 25 exports that make up the total of Iowa exports. The top 25 commodities each year account for about half of all exports from Iowa. This is a large percentage as there are many more exports from Iowa than just the top 25. 
+
+
+## Top 25 Exports Over Time
+```{r, echo=FALSE}
+exports2 <- exports %>% filter(name=="Percent Change 2019-2020") %>% select(description, value)
+plot2 <- ggplot(exports2, aes(x=reorder(description, value) , y=value)) + geom_col(fill = "deepskyblue3") +coord_flip() +labs(x="Commodity") + ggtitle("Percent Change from 2019 to 2020")
+plot2
+```
+  
+While we have such a lot consistency in the exports, this chart shows how many of the exports increased or decreased from 2019 to 2020. The COVID-19 pandemic in 2020 may have made an impact. The second largest increase was seen in instruments and appliances for medical or surgical uses. These may have been deployed to hospitals during the start of the pandemic in March of 2020. The largest percent changed from 2019 to 2020 can be seen in soybeans. Although, from the previous graph we can see that soybeans rank as the 8th most exported commodity. The other two exports of interest, corn and swine, saw an a slight increase. The largest decrease in change can be seen in civilian aircraft, engines, and parts. 
+  
+## Conclusion 
+When you think of Iowa, most think of corn, soybeans, and pigs. It is evident that these three exports do hold a lot of weight in the distribution of exports. Swine remains quite consistent, while corn has seen a decrease since 2019. Soybeans have increased in production from 2019-2020, but still remain in a historical range. These three exports together made up slightly over 20% of the exports from Iowa in 2020. It is important to note that for all exports from Iowa, the top 25 constitute for about 50% of all exports from Iowa. The exports do change slightly from year to year depending on the demand and ability to supply based on weather and planting of crops. Even with this variability in mind, we can conclude that the value of the top 25 Iowa exports stays quite consistent from year to year. It will be interesting to see if this trend continues in the future, but the weather and demand can be hard to predict. The list of the top 25 Iowa exports prove that America really does need farmers!
+  
+  
